@@ -6,16 +6,19 @@
 |---|---|---|---|---|---|
 | Apple | Market model | -0.09% | +2.84% | +4.49% | +2.85% |
 |  | Market-adjusted | +0.19% | +3.72% | +6.64% | +7.39% |
+|  | Multi-factor | +0.79% | +4.42%* | +6.34% | +2.02% |
 | Qualcomm | Market model | +2.31% | +8.20% | +12.06% | -0.73% |
 |  | Market-adjusted | +1.79% | +6.38% | +10.57% | +2.37% |
+|  | Multi-factor | +1.44% | +6.78% | +11.24% | +4.18% |
 | Micron | Market model | +3.74% | -0.06% | -3.48% | -29.36% |
 |  | Market-adjusted | +3.22% | -2.14% | -1.16% | -8.75% |
+|  | Multi-factor | +0.03% | -7.27% | -11.77% | -17.70% |
 | Samsung Electronics | Market model | -0.01% | -3.35% | -3.54% | +4.58% (27d so far) |
 |  | Market-adjusted | +0.07% | -3.10% | -1.37% | +2.26% (27d so far) |
 
 Stars mark statistical significance: \*\*\* p<0.01, \*\* p<0.05, \* p<0.10.
 
-**Two definitions of "normal."** The *market model* predicts each stock from its market using a fitted alpha and beta. The *market-adjusted* version is simply the stock's return minus its market's. Over a few days they agree closely. Over 30 days they can differ, because the market model's alpha assumes a stock's pre-event trend continues: a stock on a hot streak (like Micron) then shows a large "abnormal" loss just for cooling off. Conclusions here rely only on results where both methods agree.
+**Three definitions of "normal."** The *market model* predicts each stock from its market using a fitted alpha and beta. The *market-adjusted* version is simply the stock's return minus its market's. The *multi-factor* model also controls for size, value and momentum (US stocks only). Over a few days they agree closely. Over 30 days they can differ, because the market and multi-factor models include an alpha that assumes a stock's pre-event trend continues: a stock on a hot streak (like Micron) then shows a large "abnormal" loss just for cooling off. For long windows, the market-adjusted figure is the safer read, and conclusions here rely only on results where the methods agree.
 
 #### Apple: the Duo vs. past launches
 
@@ -37,3 +40,10 @@ Stars mark statistical significance: \*\*\* p<0.01, \*\* p<0.05, \* p<0.10.
 | Samsung Electronics | 104.5% | 57.7% | -46.8% | 0.254 |
 
 Apple GARCH(1,1): alpha = 0.073, beta = 0.862, persistence = 0.934 (a volatility shock loses half its effect in about 10 trading days).
+
+#### Public attention (daily Wikipedia page views)
+
+| Article | Avg. daily views, 30 days before | 30 days after | Change | Busiest day |
+|---|---|---|---|---|
+| Foldable smartphone | 208 | 1,023 | 4.9× | 2026-09-10 (6,427) |
+| iPhone | 4,978 | 4,728 | 0.9× | 2026-09-10 (13,362) |
