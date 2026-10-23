@@ -2,24 +2,30 @@
 
 #### Cumulative abnormal return after the Duo announcement
 
-| Company | Event day | Days -1 to +1 | Days -5 to +5 | Days 0 to +30 |
-|---|---|---|---|---|
-| Apple | -0.09% | +2.84% | +4.49% | +2.85% |
-| Qualcomm | +2.31% | +8.20% | +12.06% | -0.73% |
-| Micron | +3.74% | -0.06% | -3.48% | -29.36% |
-| Samsung Electronics | -0.01% | -3.35% | -3.54% | +4.58% (27d so far) |
+| Company | Method | Event day | Days -1 to +1 | Days -5 to +5 | Days 0 to +30 |
+|---|---|---|---|---|---|
+| Apple | Market model | -0.09% | +2.84% | +4.49% | +2.85% |
+|  | Market-adjusted | +0.19% | +3.72% | +6.64% | +7.39% |
+| Qualcomm | Market model | +2.31% | +8.20% | +12.06% | -0.73% |
+|  | Market-adjusted | +1.79% | +6.38% | +10.57% | +2.37% |
+| Micron | Market model | +3.74% | -0.06% | -3.48% | -29.36% |
+|  | Market-adjusted | +3.22% | -2.14% | -1.16% | -8.75% |
+| Samsung Electronics | Market model | -0.01% | -3.35% | -3.54% | +4.58% (27d so far) |
+|  | Market-adjusted | +0.07% | -3.10% | -1.37% | +2.26% (27d so far) |
 
 Stars mark statistical significance: \*\*\* p<0.01, \*\* p<0.05, \* p<0.10.
 
-#### Apple: the Duo vs. past launches (days -1 to +1)
+**Two definitions of "normal."** The *market model* predicts each stock from its market using a fitted alpha and beta. The *market-adjusted* version is simply the stock's return minus its market's. Over a few days they agree closely. Over 30 days they can differ, because the market model's alpha assumes a stock's pre-event trend continues: a stock on a hot streak (like Micron) then shows a large "abnormal" loss just for cooling off. Conclusions here rely only on results where both methods agree.
 
-| Launch | Date | Abnormal return | t-stat |
-|---|---|---|---|
-| iPhone Duo announced | 2026-09-09 | +2.84% | 1.04 |
-| iPhone 17 / iPhone Air announced | 2025-09-09 | -6.08%*** | -2.68 |
-| iPhone 16 announced | 2024-09-09 | -1.02% | -0.42 |
-| Vision Pro announced (WWDC) | 2023-06-05 | -2.63% | -1.40 |
-| iPhone X announced | 2017-09-12 | -1.39% | -1.04 |
+#### Apple: the Duo vs. past launches
+
+| Launch | Date | Days -1 to +1 | t-stat | Days 0 to +30 (market-adjusted) |
+|---|---|---|---|---|
+| iPhone Duo announced | 2026-09-09 | +2.84% | 1.04 | +7.39% |
+| iPhone 17 / iPhone Air announced | 2025-09-09 | -6.08%*** | -2.68 | +6.64% |
+| iPhone 16 announced | 2024-09-09 | -1.02% | -0.42 | -0.92% |
+| Vision Pro announced (WWDC) | 2023-06-05 | -2.63% | -1.40 | +1.06% |
+| iPhone X announced | 2017-09-12 | -1.39% | -1.04 | -6.04% |
 
 #### Volatility, 30 trading days before vs. after (annualized)
 
