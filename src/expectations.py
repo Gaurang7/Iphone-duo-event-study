@@ -7,7 +7,8 @@ traders expect big news, options get more expensive. From option prices you
 can back out the "implied volatility" (IV): the volatility the market is
 pricing in for the next 30 days.
 
-Cboe publishes this for Apple as an index, VXAPL. A reading of 30 means the
+Cboe publishes this for Apple as an index, VXAPL (daily history from Cboe's
+website, with Yahoo Finance as a backup). A reading of 30 means the
 options market expects Apple to move about 30% (annualized) over the next month.
 
 Three questions:
@@ -28,17 +29,51 @@ DATA_DIR = Path(__file__).resolve().parent.parent / "data"
 IMPLIED_VOL_FILE = DATA_DIR / "implied_vol.csv"
 
 
-def download_implied_vol(ticker, start):
+# Cboe publishes the full daily history of its volatility indexes as CSV files.
+CBOE_HISTORY_URL = "https://cdn.cboe.com/api/global/us_indices/daily_prices/{symbol}_History.csv"
+
+
+def _from_cboe(symbol):
+    table = pd.read_csv(CBOE_HISTORY_URL.format(symbol=symbol))
+    table.columns = [c.strip().upper() for c in table.columns]
+    # Files have either DATE,OPEN,HIGH,LOW,CLOSE or just DATE,<SYMBOL>.
+    value_col = "CLOSE" if "CLOSE" in table.columns else table.columns[-1]
+    iv = pd.Series(pd.to_numeric(table[value_col], errors="coerce").to_numpy(),
+                   index=pd.to_datetime(table["DATE"]))
+    return iv
+
+
+def _from_yahoo(ticker, start):
     import yfinance as yf
 
     raw = yf.download(ticker, start=start, auto_adjust=False, progress=False)
-    if raw.empty:
-        raise RuntimeError(f"No data came back for {ticker}.")
     iv = raw["Close"]
     if isinstance(iv, pd.DataFrame):
         iv = iv.iloc[:, 0]
     iv.index = pd.to_datetime(iv.index).tz_localize(None)
-    return iv.dropna().rename("implied_vol")
+    return iv
+
+
+def download_implied_vol(ticker, start):
+    """
+    Daily implied volatility history. Tries Cboe's own file first (complete
+    history), then Yahoo Finance. Keeps whichever source has the most days.
+    """
+    candidates = []
+    for name, fetch in [("Cboe", lambda: _from_cboe(ticker.lstrip("^"))),
+                        ("Yahoo", lambda: _from_yahoo(ticker, start))]:
+        try:
+            series = fetch().dropna()
+            candidates.append(series[series.index >= pd.Timestamp(start)])
+        except Exception as err:  # noqa: BLE001 - try the next source
+            print(f"  {name} implied volatility download failed: {err}")
+    candidates = [c for c in candidates if len(c) > 0]
+    if not candidates:
+        raise RuntimeError(f"No implied volatility data for {ticker}.")
+    best = max(candidates, key=len).sort_index()
+    if len(best) < 60:
+        raise RuntimeError(f"Only {len(best)} days of implied volatility for {ticker}; need history.")
+    return best.rename("implied_vol")
 
 
 def load_implied_vol(ticker, start, refresh=False):

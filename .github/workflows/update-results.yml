@@ -23,6 +23,11 @@ on:
 permissions:
   contents: write
 
+# Never run two updates at once (they would both try to push).
+concurrency:
+  group: update-results
+  cancel-in-progress: false
+
 jobs:
   update:
     runs-on: ubuntu-latest
@@ -52,5 +57,6 @@ jobs:
             echo "Nothing changed."
           else
             git commit -m "Update prices and results through $(date -u +%Y-%m-%d)"
+            git pull --rebase -X theirs origin main
             git push
           fi
