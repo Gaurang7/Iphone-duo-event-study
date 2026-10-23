@@ -1,5 +1,3 @@
-Gaurang7
-Iphone-duo-event-study
 # How did the market react to Apple's iPhone Duo?
 
 An event study of Apple's first foldable iPhone. On **September 9, 2026**, Apple announced the
@@ -107,7 +105,7 @@ The math is checked against simulated data with known answers in `tests/`.
 ## Run it yourself
 
 ```bash
-git clone https://github.com/Gaurang7/iphone-duo-event-study.git
+git clone https://github.com/Gaurang7/Iphone-duo-event-study.git
 cd iphone-duo-event-study
 pip install -r requirements.txt
 
