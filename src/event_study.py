@@ -29,6 +29,13 @@ THE STEPS
         expected return = alpha + beta * market_return
         abnormal return = actual return - expected return
 
+   A second, simpler version is the MARKET-ADJUSTED model, which assumes
+   alpha = 0 and beta = 1:  abnormal return = stock return - market return.
+   It is cruder, but it can't be fooled by a hot streak: if a stock rose
+   0.5% a day before the event, the market model's alpha "expects" that to
+   continue, and when it stops, the model reports a large abnormal loss.
+   Over long windows we report both, and trust the story only when they agree.
+
 3. Add up the abnormal returns over a window to get the CUMULATIVE ABNORMAL
    RETURN (CAR). A CAR of -2% over days -1..+1 means the stock did 2% worse
    than the market predicted over those three days.
@@ -54,6 +61,15 @@ class MarketModel:
     resid_std: float   # typical size of the stock's day-to-day "noise"
     r_squared: float   # share of the stock's moves explained by the market (0 to 1)
     n_obs: int         # number of days used to fit the model
+    adj_std: float = float("nan")  # daily noise of (stock - market), for the market-adjusted model
+
+
+# The two ways of defining "normal" (see the top of this file).
+# name -> (abnormal-return column, CAR column, readable label, noise attribute)
+METHODS = {
+    "market_model": ("abnormal", "car_from_day0", "Market model", "resid_std"),
+    "market_adjusted": ("abnormal_adj", "car_adj_from_day0", "Market-adjusted", "adj_std"),
+}
 
 
 @dataclass
@@ -122,6 +138,7 @@ def run_event_study(returns, event_date, estimation_window, event_window,
         raise ValueError("Not enough history before the event for the estimation window.")
     est = returns.iloc[est_start:est_end + 1]
     model = fit_market_model(est["stock"], est["market"])
+    model.adj_std = float((est["stock"] - est["market"]).std())
 
     # --- Step 2: abnormal returns in the event window ----------------------
     # The window may be cut short if the event is recent (no future data yet).
@@ -138,7 +155,10 @@ def run_event_study(returns, event_date, estimation_window, event_window,
     # CAR path measured from day 0, so the chart reads "since the event".
     # Days before the event count backwards (pre-event drift shows up as
     # the line arriving at day 0 from above or below zero).
-    daily["car_from_day0"] = _car_path_from_day0(daily)
+    daily["car_from_day0"] = _car_path_from_day0(daily, "abnormal")
+    # The market-adjusted version: simply stock minus market.
+    daily["abnormal_adj"] = daily["actual"] - daily["market"]
+    daily["car_adj_from_day0"] = _car_path_from_day0(daily, "abnormal_adj")
 
     return EventStudyResult(
         stock=stock_name,
@@ -149,19 +169,19 @@ def run_event_study(returns, event_date, estimation_window, event_window,
     )
 
 
-def _car_path_from_day0(daily):
+def _car_path_from_day0(daily, column):
     """
     Running total of abnormal returns, shifted so the line is at 0 on day -1
     (the last day before the event). Then the value on day 5, for example,
     reads as "the total abnormal return from the event through day 5".
     """
-    running_total = daily["abnormal"].cumsum()
+    running_total = daily[column].cumsum()
     before_event = daily["day"] == -1
     anchor = running_total[before_event].iloc[0] if before_event.any() else 0.0
     return running_total - anchor
 
 
-def car_for_window(result, window):
+def car_for_window(result, window, method="market_model"):
     """
     CAR and its significance for one (start, end) window.
 
@@ -169,6 +189,8 @@ def car_for_window(result, window):
     The sqrt is there because independent daily noise adds up like that:
     over 4 days, typical noise is about 2x one day's, not 4x.
     """
+    abnormal_col, _, _, noise_attr = METHODS[method]
+    noise = getattr(result.model, noise_attr)
     start, end = window
     d = result.daily
     sub = d[(d["day"] >= start) & (d["day"] <= end)]
@@ -179,8 +201,8 @@ def car_for_window(result, window):
         return {"window": f"[{start:+d}, {end:+d}]", "days": 0, "complete": False,
                 "car": np.nan, "t_stat": np.nan, "p_value": np.nan}
 
-    car = sub["abnormal"].sum()
-    t_stat = car / (result.model.resid_std * np.sqrt(n_days))
+    car = sub[abnormal_col].sum()
+    t_stat = car / (noise * np.sqrt(n_days))
     p_value = 2 * (1 - stats.t.cdf(abs(t_stat), df=result.model.n_obs - 2))
 
     return {
@@ -193,10 +215,11 @@ def car_for_window(result, window):
     }
 
 
-def car_table(result, windows):
+def car_table(result, windows, method="market_model"):
     """CAR for several windows at once, as a table."""
-    rows = [car_for_window(result, w) for w in windows]
+    rows = [car_for_window(result, w, method) for w in windows]
     table = pd.DataFrame(rows)
     table.insert(0, "stock", result.stock)
+    table.insert(1, "method", METHODS[method][2])
     table["significant_5pct"] = table["p_value"] < 0.05
     return table

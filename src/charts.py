@@ -64,18 +64,18 @@ def _end_labels(ax, ends):
                     va="center", annotation_clip=False, **style)
 
 
-def plot_car_paths(results, names, path, title, subtitle):
+def plot_car_paths(results, names, path, title, subtitle, column="car_from_day0"):
     """One line per stock: cumulative abnormal return around the event."""
     fig, ax = plt.subplots(figsize=(9, 5))
     ends = []
     for ticker, result in results.items():
         d = result.daily
-        ax.plot(d["day"], d["car_from_day0"], color=COLORS.get(ticker, MUTED), linewidth=2,
+        ax.plot(d["day"], d[column], color=COLORS.get(ticker, MUTED), linewidth=2,
                 label=names[ticker])
         # Direct label at the end of each line, in text color (the line carries the color).
-        last = d.dropna(subset=["car_from_day0"]).iloc[-1]
-        ends.append((last["day"] + 0.8, last["car_from_day0"],
-                     f"{names[ticker]} {last['car_from_day0']:+.1%}", {"color": TEXT}))
+        last = d.dropna(subset=[column]).iloc[-1]
+        ends.append((last["day"] + 0.8, last[column],
+                     f"{names[ticker]} {last[column]:+.1%}", {"color": TEXT}))
     _style(ax, title, subtitle)
     ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0, decimals=0))
     ax.set_xlabel("Trading days relative to the event", color=TEXT_SECONDARY, fontsize=9)
@@ -88,22 +88,22 @@ def plot_car_paths(results, names, path, title, subtitle):
     plt.close(fig)
 
 
-def plot_launch_comparison(results, labels, highlight_key, path):
+def plot_launch_comparison(results, labels, highlight_key, path, column="car_from_day0",
+                           subtitle="Cumulative return beyond what the S&P 500 predicted, from the event onward"):
     """Apple's CAR after each launch; the Duo highlighted, the rest muted."""
     fig, ax = plt.subplots(figsize=(9, 5))
     ends = []
     for key, result in results.items():
         d = result.daily
         is_main = key == highlight_key
-        ax.plot(d["day"], d["car_from_day0"], color=HIGHLIGHT if is_main else MUTED,
+        ax.plot(d["day"], d[column], color=HIGHLIGHT if is_main else MUTED,
                 linewidth=2.5 if is_main else 1.5, zorder=3 if is_main else 2)
-        last = d.dropna(subset=["car_from_day0"]).iloc[-1]
-        ends.append((last["day"] + 0.8, last["car_from_day0"],
-                     f"{labels[key]} {last['car_from_day0']:+.1%}",
+        last = d.dropna(subset=[column]).iloc[-1]
+        ends.append((last["day"] + 0.8, last[column],
+                     f"{labels[key]} {last[column]:+.1%}",
                      {"color": TEXT if is_main else TEXT_SECONDARY,
                       "fontweight": "bold" if is_main else "normal"}))
-    _style(ax, "Apple's abnormal return after each product launch",
-           "Cumulative return beyond what the S&P 500 predicted, from the event onward")
+    _style(ax, "Apple's abnormal return after each product launch", subtitle)
     ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0, decimals=0))
     ax.set_xlabel("Trading days relative to the launch event", color=TEXT_SECONDARY, fontsize=9)
     _event_line(ax, "Launch event")

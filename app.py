@@ -14,7 +14,7 @@ import streamlit as st
 import config
 from src.charts import COLORS, HIGHLIGHT, MUTED
 from src.data import PRICES_FILE, download_prices, pair_returns, save_prices
-from src.event_study import car_table, run_event_study
+from src.event_study import METHODS, car_table, run_event_study
 from src.volatility import fit_garch, rolling_volatility, volatility_before_after
 
 st.set_page_config(page_title="iPhone Duo Event Study", layout="wide")
@@ -52,12 +52,12 @@ def get_study(_prices, last_date, ticker, event_key):
                            offset_days=info["reaction_offset_days"], stock_name=ticker)
 
 
-def car_chart(lines, title):
+def car_chart(lines, title, column="car_adj_from_day0"):
     """lines: list of (name, daily_table, color, width). One line per series."""
     fig = go.Figure()
     for name, daily, color, width in lines:
         fig.add_trace(go.Scatter(
-            x=daily["day"], y=daily["car_from_day0"], name=name, mode="lines",
+            x=daily["day"], y=daily[column], name=name, mode="lines",
             line={"color": color, "width": width},
             hovertemplate="Day %{x}: %{y:+.2%}<extra>" + name + "</extra>",
         ))
@@ -98,6 +98,12 @@ with st.sidebar:
                              index=list(config.EVENTS).index(config.MAIN_EVENT))
     tickers = st.multiselect("Companies", list(config.STOCKS), default=list(config.STOCKS),
                              format_func=NAMES.get)
+    method = st.radio(
+        "How to define \"normal\"", list(METHODS), format_func=lambda m: METHODS[m][2],
+        help="Market-adjusted: stock return minus market return. Market model: uses each "
+             "stock's fitted alpha and beta. They agree over a few days; over 30 days the market "
+             "model can exaggerate moves for stocks that were on a hot streak before the event.",
+    )
     refresh = st.button("Download latest prices")
     st.caption("Prices: Yahoo Finance, adjusted for splits and dividends.")
 
@@ -131,16 +137,17 @@ with tab_reaction:
     if studies:
         cols = st.columns(len(studies))
         for col, (t, result) in zip(cols, studies.items()):
-            row = car_table(result, [(-1, 1)]).iloc[0]
+            row = car_table(result, [(-1, 1)], method).iloc[0]
             col.metric(f"{NAMES[t]}, days -1 to +1",
                        f"{row['car']:+.2%}" if pd.notna(row["car"]) else "n/a",
                        help=config.STOCKS[t]["role"])
 
         lines = [(NAMES[t], r.daily, COLORS.get(t, MUTED), 2.5) for t, r in studies.items()]
-        st.plotly_chart(car_chart(lines, f"Cumulative abnormal return: {EVENT_LABELS[event_key]}"),
+        st.plotly_chart(car_chart(lines, f"Cumulative abnormal return: {EVENT_LABELS[event_key]}",
+                                  METHODS[method][1]),
                         use_container_width=True)
 
-        table = pd.concat([car_table(r, config.CAR_WINDOWS) for r in studies.values()])
+        table = pd.concat([car_table(r, config.CAR_WINDOWS, method) for r in studies.values()])
         table["Company"] = table["stock"].map(NAMES)
         st.dataframe(format_car_table(table)[["Company", "Window", "Abnormal return", "t-stat",
                                               "p-value", "Significant (5%)", "Days of data"]],
@@ -158,12 +165,13 @@ with tab_launches:
     launch_studies = {k: get_study(prices, last_date, "AAPL", k) for k in config.COMPARISON_EVENTS}
     lines = [(EVENT_LABELS[k], r.daily, HIGHLIGHT if k == config.MAIN_EVENT else MUTED,
               3 if k == config.MAIN_EVENT else 1.5) for k, r in launch_studies.items()]
-    st.plotly_chart(car_chart(lines, "Apple's abnormal return around each launch"),
+    st.plotly_chart(car_chart(lines, "Apple's abnormal return around each launch",
+                              METHODS[method][1]),
                     use_container_width=True)
 
     rows = []
     for k, r in launch_studies.items():
-        t = car_table(r, [(-1, 1), (0, 30)]).set_index("window")
+        t = car_table(r, [(-1, 1), (0, 30)], method).set_index("window")
         rows.append({"Launch": EVENT_LABELS[k], "Date": config.EVENTS[k]["date"],
                      "Days -1 to +1": f"{t.loc['[-1, +1]', 'car']:+.2%}",
                      "t-stat": round(t.loc["[-1, +1]", "t_stat"], 2),
