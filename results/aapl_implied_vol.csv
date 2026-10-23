@@ -1,0 +1,2 @@
+iv_30d_before_avg,iv_day_before,iv_day_after,iv_30d_after_avg,expected_daily_move,actual_day0_return,move_vs_expected,realized_vol_next_month,realized_days
+0.26887,0.2816,0.2721,0.26731,0.017739132599899732,-0.0027828881140200545,0.15687847747616387,0.19969014673202484,21

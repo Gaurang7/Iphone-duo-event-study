@@ -41,6 +41,17 @@ Stars mark statistical significance: \*\*\* p<0.01, \*\* p<0.05, \* p<0.10.
 
 Apple GARCH(1,1): alpha = 0.073, beta = 0.862, persistence = 0.934 (a volatility shock loses half its effect in about 10 trading days).
 
+#### What options traders expected (Apple implied volatility, VXAPL)
+
+| Measure | Value |
+|---|---|
+| Implied volatility, average of 30 days before | 26.9% |
+| Implied volatility, day before the event | 28.2% |
+| Implied volatility, day after the event | 27.2% |
+| Expected one-day move (from IV) | ±1.77% |
+| Actual move on the event day | -0.28% (0.2× the expected move) |
+| Realized volatility over the next 21 trading days | 20.0% |
+
 #### Public attention (daily Wikipedia page views)
 
 | Article | Avg. daily views, 30 days before | 30 days after | Change | Busiest day |
