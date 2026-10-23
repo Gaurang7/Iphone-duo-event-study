@@ -13,8 +13,10 @@ import streamlit as st
 
 import config
 from src.charts import COLORS, HIGHLIGHT, MUTED
-from src.data import PRICES_FILE, download_prices, pair_returns, save_prices
+from src.attention import ATTENTION_FILE, attention_before_after, index_to_baseline
+from src.data import PRICES_FILE, download_prices, factor_returns, pair_returns, save_prices
 from src.event_study import METHODS, car_table, run_event_study
+from src.expectations import IMPLIED_VOL_FILE, implied_vs_realized
 from src.volatility import fit_garch, rolling_volatility, volatility_before_after
 
 st.set_page_config(page_title="iPhone Duo Event Study", layout="wide")
@@ -47,9 +49,16 @@ def get_study(_prices, last_date, ticker, event_key):
     """Event study for one stock/event. last_date is only there to refresh the cache."""
     info = config.STOCKS[ticker]
     returns = pair_returns(_prices, ticker, info["benchmark"])
+    factors = factor_returns(_prices) if ticker in config.FACTOR_MODEL_STOCKS else None
     return run_event_study(returns, config.EVENTS[event_key]["date"],
                            config.ESTIMATION_WINDOW, config.EVENT_WINDOW,
-                           offset_days=info["reaction_offset_days"], stock_name=ticker)
+                           offset_days=info["reaction_offset_days"], stock_name=ticker,
+                           factors=factors)
+
+
+def load_optional_csv(path):
+    """Extra data saved by run_analysis.py; None if it isn't there yet."""
+    return pd.read_csv(path, index_col=0, parse_dates=True) if path.exists() else None
 
 
 def car_chart(lines, title, column="car_adj_from_day0"):
@@ -129,8 +138,9 @@ for t in tickers:
     except ValueError as err:
         st.warning(f"{NAMES[t]}: {err}")
 
-tab_reaction, tab_launches, tab_vol, tab_method = st.tabs(
-    ["Market reaction", "Duo vs. past launches", "Volatility", "How it works"])
+tab_reaction, tab_launches, tab_vol, tab_expect, tab_attention, tab_method = st.tabs(
+    ["Market reaction", "Duo vs. past launches", "Volatility", "Expectations (options)",
+     "Public attention", "How it works"])
 
 # --- Tab 1: market reaction -------------------------------------------------
 with tab_reaction:
@@ -157,6 +167,8 @@ with tab_reaction:
             st.dataframe(pd.DataFrame([
                 {"Company": NAMES[t], "Market": config.STOCKS[t]["benchmark"],
                  "Beta": round(r.model.beta, 2), "R-squared": round(r.model.r_squared, 2),
+                 "Multi-factor R-squared": (round(r.model.ff_r_squared, 2)
+                                            if pd.notna(r.model.ff_r_squared) else "n/a"),
                  "Day 0": r.day0_date.date()}
                 for t, r in studies.items()]), hide_index=True)
 
@@ -218,7 +230,67 @@ with tab_vol:
             f"effect in about {garch['half_life_days']:.0f} trading days."
         )
 
-# --- Tab 4: method ------------------------------------------------------------
+# --- Tab 4: what options traders expected -------------------------------------
+with tab_expect:
+    iv = load_optional_csv(IMPLIED_VOL_FILE)
+    if iv is None:
+        st.info("No implied volatility data yet. Run `python run_analysis.py --refresh`.")
+    else:
+        iv = iv["implied_vol"]
+        aapl = studies.get("AAPL") or get_study(prices, last_date, "AAPL", config.MAIN_EVENT)
+        aapl_returns = prices["AAPL"].dropna().pct_change().dropna()
+        out = implied_vs_realized(iv, aapl_returns, aapl.day0_date)
+        c1, c2, c3 = st.columns(3)
+        c1.metric("Implied volatility, day before", f"{out['iv_day_before']:.1%}",
+                  help="What Apple's options prices implied for the next 30 days.")
+        c2.metric("Expected one-day move", f"±{out['expected_daily_move']:.2%}")
+        c3.metric("Actual move on day 0", f"{out['actual_day0_return']:+.2%}",
+                  f"{out['move_vs_expected']:.1f}× expected", delta_color="off")
+
+        start = aapl.day0_date - pd.DateOffset(months=6)
+        realized = rolling_volatility(aapl_returns, config.ROLLING_VOL_DAYS)
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=iv[iv.index >= start].index, y=iv[iv.index >= start] / 100,
+                                 name="Implied volatility (expected)", line={"color": HIGHLIGHT, "width": 2.5}))
+        fig.add_trace(go.Scatter(x=realized[realized.index >= start].index,
+                                 y=realized[realized.index >= start],
+                                 name="21-day realized volatility (actual)",
+                                 line={"color": COLORS["QCOM"], "width": 1.5}))
+        fig.add_vline(x=aapl.day0_date, line_dash="dash", line_color="#52514e")
+        fig.update_layout(title="Apple: expected vs. actual volatility", height=420, hovermode="x unified",
+                          yaxis_tickformat=".0%", yaxis_rangemode="tozero",
+                          legend={"orientation": "h", "y": -0.15}, margin={"t": 60})
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption("Implied volatility is Cboe's VXAPL index, built from Apple option prices.")
+
+# --- Tab 5: public attention ----------------------------------------------------
+with tab_attention:
+    views = load_optional_csv(ATTENTION_FILE)
+    if views is None:
+        st.info("No page-view data yet. Run `python run_analysis.py --refresh`.")
+    else:
+        event_date = config.EVENTS[config.MAIN_EVENT]["date"]
+        indexed = index_to_baseline(views, event_date)
+        fig = go.Figure()
+        for color, label in zip([HIGHLIGHT, COLORS["QCOM"], COLORS["MU"]], indexed.columns):
+            fig.add_trace(go.Scatter(x=indexed.index, y=indexed[label], name=label,
+                                     line={"color": color, "width": 2}))
+        fig.add_vline(x=pd.Timestamp(event_date), line_dash="dash", line_color="#52514e")
+        fig.add_hline(y=100, line_color="#52514e", line_width=1)
+        fig.update_layout(title="Daily Wikipedia page views (30-day pre-event average = 100)",
+                          height=420, hovermode="x unified", yaxis_rangemode="tozero",
+                          legend={"orientation": "h", "y": -0.15}, margin={"t": 60})
+        st.plotly_chart(fig, use_container_width=True)
+        table = attention_before_after(views, event_date)
+        st.dataframe(pd.DataFrame({
+            "Article": table["article"],
+            "Avg. daily views before": table["avg_views_before"].round(0),
+            "Avg. daily views after": table["avg_views_after"].round(0),
+            "Change": table["ratio_after_vs_before"].map(lambda x: f"{x:.1f}×"),
+            "Busiest day": table["peak_date"],
+        }), hide_index=True, use_container_width=True)
+
+# --- Tab 6: method ------------------------------------------------------------
 with tab_method:
     st.markdown(
         """
@@ -239,8 +311,19 @@ for example the day before through the day after.
 **4. Test it.** The t-statistic compares the CAR with the stock's normal daily noise.
 Roughly, |t| above 2 means the move would be unusual if the event didn't matter.
 
-**5. Volatility.** I compare volatility 30 days before vs. after (Levene's test) and fit a
+**5. Check it three ways.** Besides the market model, I report a *market-adjusted* return
+(stock minus market) and a *multi-factor* model that also controls for size, value and
+momentum, using ETFs that track those factors (Fama-French style). Over long windows the
+models with an alpha can exaggerate moves for stocks on a hot streak, so I only trust
+results the methods agree on.
+
+**6. Volatility.** I compare volatility 30 days before vs. after (Levene's test) and fit a
 GARCH(1,1) model, which captures how calm and turbulent periods cluster.
+
+**7. Expectations.** Apple's implied volatility index (VXAPL) shows how big a move options
+traders were pricing in before the event, which I compare with the move that happened.
+
+**8. Attention.** Daily Wikipedia page views show whether the public's interest jumped.
 
 **Caveats.** Other news overlaps with the event: John Ternus became CEO on September 1, 2026,
 and the iPhone 18 Pro launched at the same event. An event study measures the reaction to

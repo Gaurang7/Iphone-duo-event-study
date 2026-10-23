@@ -77,16 +77,41 @@ Apple GARCH(1,1): alpha = 0.073, beta = 0.862, persistence = 0.934 (a volatility
 
 ![Apple's volatility before and after the announcement](figures/aapl_volatility.png)
 
+### What options traders expected
+
+Options prices reveal how big a move traders were bracing for. Apple's implied volatility index
+(VXAPL) shows what was priced in before the announcement, compared with what actually happened.
+
+![Apple's implied vs. realized volatility](figures/aapl_implied_vol.png)
+
+### Public attention
+
+Daily Wikipedia page views show whether ordinary people noticed, not just investors.
+
+![Daily Wikipedia page views around the announcement](figures/attention.png)
+
 ## Method
 
 1. **Learn "normal."** For each stock, fit a market model over 120 trading days well before the
    event (days −150 to −31): `stock return = α + β × market return`. US stocks are compared with
    the S&P 500 (SPY); Samsung with the Korean market (KOSPI).
 2. **Abnormal returns.** Around the event, abnormal return = actual return − (α + β × market return).
+   Two robustness checks run alongside it:
+   - **Market-adjusted:** stock return − market return. Cruder, but it can't extrapolate a pre-event
+     hot streak the way α can, so it is the safer read over long windows.
+   - **Multi-factor (Fama-French style):** adds size, value and momentum factors. The official
+     Fama-French data is published with a lag, so the factors are built daily from ETFs:
+     size = IWM − SPY, value = IWD − IWF, momentum = MTUM − SPY.
 3. **Cumulative abnormal return (CAR).** Sum abnormal returns over windows such as days −1 to +1
    and 0 to +30, and test significance with a t-statistic based on the stock's normal daily noise.
 4. **Volatility.** Compare annualized volatility 30 trading days before vs. after (Levene's test),
    and fit a GARCH(1,1) model by maximum likelihood to see how persistent volatility shocks are.
+5. **Expectations.** From Cboe's Apple implied volatility index (VXAPL), compute the one-day move
+   options traders were pricing in, and compare it with the actual move and the next month's
+   realized volatility.
+6. **Attention.** Daily Wikipedia page views (Wikimedia's official API) for "Foldable smartphone"
+   and "iPhone", indexed to their pre-event average. Wikipedia replaces Google Trends here because
+   Trends has no official API and often blocks automated requests.
 
 The math is checked against simulated data with known answers in `tests/`.
 
@@ -121,8 +146,10 @@ config.py              every setting: stocks, events, windows
 run_analysis.py        runs the whole project and writes results/ and figures/
 app.py                 interactive Streamlit dashboard
 src/data.py            downloads and caches prices
-src/event_study.py     market model, abnormal returns, CAR, t-tests
+src/event_study.py     market, market-adjusted and multi-factor models; CAR; t-tests
 src/volatility.py      realized volatility, before/after test, GARCH(1,1)
+src/expectations.py    options-implied volatility vs. what happened
+src/attention.py       Wikipedia page views (public attention)
 src/charts.py          the static charts in this README
 tests/                 checks the math against simulated data
 .github/workflows/     refreshes the data and results every weekday
@@ -130,9 +157,12 @@ tests/                 checks the math against simulated data
 
 ## Next steps
 
-- Add options-implied volatility to see what the market *expected* before the event.
-- Use a multi-factor model (Fama-French) instead of the single-market model.
-- Add Google Trends interest in "foldable phone" as a non-price signal.
+- **Intraday data:** Apple's event started at 1pm Eastern; minute-by-minute prices would show how
+  quickly the market reacted during the presentation itself.
+- **Sales signals:** once Duo sales or shipment estimates are reported, test whether the stock
+  reaction predicted actual demand.
+- **Peer portfolio:** extend to all major Apple suppliers to see which ones the market treated as
+  winners or losers.
 
 ---
 

@@ -121,10 +121,30 @@ ROLLING_VOL_DAYS = 21
 TRADING_DAYS_PER_YEAR = 252
 
 
+# ---------------------------------------------------------------------------
+# 6. Extra data
+# ---------------------------------------------------------------------------
+# ETFs used to build the size, value and momentum factors (see src/data.py).
+# The multi-factor model applies to US stocks only.
+FACTOR_ETFS = ["IWM", "IWD", "IWF", "MTUM"]
+FACTOR_MODEL_STOCKS = ["AAPL", "QCOM", "MU"]
+
+# Cboe's implied volatility index for Apple: the volatility that Apple's
+# options prices imply for the next 30 days, i.e. what traders EXPECT.
+IMPLIED_VOL_TICKER = "^VXAPL"
+
+# Wikipedia articles whose daily page views measure public attention.
+ATTENTION_ARTICLES = {
+    "Foldable_smartphone": "Foldable smartphone",
+    "IPhone": "iPhone",
+}
+ATTENTION_START = "2026-05-01"
+
+
 def all_tickers():
-    """Every ticker we need to download: the stocks plus their benchmarks."""
+    """Every ticker we need to download: stocks, benchmarks and factor ETFs."""
     tickers = list(STOCKS)
     for info in STOCKS.values():
         if info["benchmark"] not in tickers:
             tickers.append(info["benchmark"])
-    return tickers
+    return tickers + [t for t in FACTOR_ETFS if t not in tickers]

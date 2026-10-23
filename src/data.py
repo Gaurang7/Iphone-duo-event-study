@@ -86,3 +86,24 @@ def pair_returns(prices, stock, benchmark):
     returns = pair.pct_change().dropna()
     returns.columns = ["stock", "market"]
     return returns
+
+
+def factor_returns(prices, market="SPY"):
+    """
+    Daily returns of three classic investment "factors", built from ETFs:
+
+      size     = small companies minus the market  (IWM - SPY)
+      value    = cheap "value" stocks minus "growth" stocks  (IWD - IWF)
+      momentum = recent winners minus the market  (MTUM - SPY)
+
+    Academic Fama-French factors are published with a lag of a month or
+    more, so they don't cover a recent event yet. These ETF versions update
+    every day and capture the same ideas.
+    """
+    needed = [market, "IWM", "IWD", "IWF", "MTUM"]
+    r = prices[needed].dropna().pct_change().dropna()
+    return pd.DataFrame({
+        "size": r["IWM"] - r[market],
+        "value": r["IWD"] - r["IWF"],
+        "momentum": r["MTUM"] - r[market],
+    })

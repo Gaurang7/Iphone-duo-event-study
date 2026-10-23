@@ -129,3 +129,39 @@ def plot_volatility(rolling, garch_vol, event_date, path, start):
     fig.autofmt_xdate()
     fig.savefig(path, dpi=160, bbox_inches="tight")
     plt.close(fig)
+
+
+def plot_implied_vol(implied_vol, realized_vol, event_date, path, start):
+    """What options traders expected (implied) vs. what happened (realized)."""
+    fig, ax = plt.subplots(figsize=(9, 4.5))
+    iv = implied_vol[implied_vol.index >= start] / 100
+    rv = realized_vol[realized_vol.index >= start]
+    ax.plot(iv.index, iv, color=HIGHLIGHT, linewidth=2, label="Implied volatility (VXAPL): what options priced in")
+    ax.plot(rv.index, rv, color=COLORS["QCOM"], linewidth=1.5, label="21-day realized volatility: what happened")
+    _style(ax, "Apple: expected vs. actual volatility around the Duo launch",
+           "Annualized; the dashed line marks the announcement")
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter(1.0, decimals=0))
+    ax.axvline(event_date, color=TEXT_SECONDARY, linewidth=1, linestyle=(0, (3, 3)))
+    ax.set_ylim(bottom=0)
+    ax.legend(frameon=False, fontsize=9, loc="lower left", labelcolor=TEXT)
+    fig.autofmt_xdate()
+    fig.savefig(path, dpi=160, bbox_inches="tight")
+    plt.close(fig)
+
+
+def plot_attention(indexed_views, event_date, path):
+    """Wikipedia page views, each indexed to 100 = its pre-event average."""
+    fig, ax = plt.subplots(figsize=(9, 4.5))
+    palette = [HIGHLIGHT, COLORS["QCOM"], COLORS["MU"]]
+    for color, label in zip(palette, indexed_views.columns):
+        s = indexed_views[label].dropna()
+        ax.plot(s.index, s, color=color, linewidth=2 if color == HIGHLIGHT else 1.5, label=label)
+    _style(ax, "Public attention: daily Wikipedia page views",
+           "Indexed: each article's average in the 30 days before the announcement = 100")
+    ax.axvline(event_date, color=TEXT_SECONDARY, linewidth=1, linestyle=(0, (3, 3)))
+    ax.axhline(100, color=TEXT_SECONDARY, linewidth=0.8)
+    ax.set_ylim(bottom=0)
+    ax.legend(frameon=False, fontsize=9, loc="upper left", labelcolor=TEXT)
+    fig.autofmt_xdate()
+    fig.savefig(path, dpi=160, bbox_inches="tight")
+    plt.close(fig)
