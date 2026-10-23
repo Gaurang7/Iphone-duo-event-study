@@ -1,3 +1,5 @@
+Gaurang7
+Iphone-duo-event-study
 # How did the market react to Apple's iPhone Duo?
 
 An event study of Apple's first foldable iPhone. On **September 9, 2026**, Apple announced the
@@ -35,7 +37,7 @@ alone would have predicted?*
 |---|---|---|---|---|
 | Apple | -0.09% | +2.84% | +4.49% | +2.85% |
 | Qualcomm | +2.31% | +8.20% | +12.06% | -0.73% |
-| Micron | +3.74% | -0.06% | -3.48% | -29.36% |
+| Micron | +3.74% | -0.06% | -3.48% | -9.36% |
 | Samsung Electronics | -0.01% | -3.35% | -3.54% | +4.58% (27d so far) |
 
 Stars mark statistical significance: \*\*\* p<0.01, \*\* p<0.05, \* p<0.10.
