@@ -68,7 +68,7 @@ Stars mark statistical significance: \*\*\* p<0.01, \*\* p<0.05, \* p<0.10.
 | Micron | 85.3% | 50.7% | -34.7% | 0.194 |
 | Samsung Electronics | 104.5% | 57.7% | -46.8% | 0.254 |
 
-Apple GARCH(1,1): alpha = 0.073, beta = 0.862, persistence = 0.934 (a volatility shock loses half its effect in about 10 trading days).
+Apple GARCH(1,1): alpha = 0.073, beta = 0.861, persistence = 0.934 (a volatility shock loses half its effect in about 10 trading days).
 
 #### What options traders expected (Apple implied volatility, VXAPL)
 
